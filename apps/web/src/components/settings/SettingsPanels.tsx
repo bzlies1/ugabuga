@@ -34,7 +34,8 @@ import { ProviderModelPicker } from "../chat/ProviderModelPicker";
 import { TraitsPicker } from "../chat/TraitsPicker";
 import { resolveAndPersistPreferredEditor } from "../../editorPreferences";
 import { isElectron } from "../../env";
-import { useTheme } from "../../hooks/useTheme";
+import { getThemeById, useTheme } from "../../hooks/useTheme";
+import { DARK_THEMES, LIGHT_THEMES, isValidThemeId } from "../../themes";
 import { useSettings, useUpdateSettings } from "../../hooks/useSettings";
 import { useThreadActions } from "../../hooks/useThreadActions";
 import {
@@ -59,7 +60,16 @@ import { Button } from "../ui/button";
 import { Collapsible, CollapsibleContent } from "../ui/collapsible";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../ui/empty";
 import { Input } from "../ui/input";
-import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectGroup,
+  SelectGroupLabel,
+  SelectItem,
+  SelectPopup,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -78,20 +88,14 @@ import {
   useServerProviders,
 } from "../../rpc/serverState";
 
-const THEME_OPTIONS = [
-  {
-    value: "system",
-    label: "System",
-  },
-  {
-    value: "light",
-    label: "Light",
-  },
-  {
-    value: "dark",
-    label: "Dark",
-  },
-] as const;
+function getThemeSelectLabel(themeId: string): string {
+  const def = isValidThemeId(themeId) ? getThemeById(themeId) : null;
+  if (!def || def.id === "system") return "System";
+  if (def.id === "default-light") return "Light \u00b7 Default";
+  if (def.id === "default-dark") return "Dark \u00b7 Default";
+  const group = def.appearance === "light" ? "Light" : "Dark";
+  return `${group} \u00b7 ${def.label}`;
+}
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "System default",
@@ -769,22 +773,38 @@ export function GeneralSettingsPanel() {
             <Select
               value={theme}
               onValueChange={(value) => {
-                if (value === "system" || value === "light" || value === "dark") {
+                if (value && isValidThemeId(value)) {
                   setTheme(value);
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:w-40" aria-label="Theme preference">
-                <SelectValue>
-                  {THEME_OPTIONS.find((option) => option.value === theme)?.label ?? "System"}
-                </SelectValue>
+              <SelectTrigger className="w-full sm:w-48" aria-label="Theme preference">
+                <SelectValue>{getThemeSelectLabel(theme)}</SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
-                {THEME_OPTIONS.map((option) => (
-                  <SelectItem hideIndicator key={option.value} value={option.value}>
-                    {option.label}
+                <SelectGroup>
+                  <SelectItem hideIndicator value="system">
+                    System
                   </SelectItem>
-                ))}
+                </SelectGroup>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectGroupLabel>Light</SelectGroupLabel>
+                  {LIGHT_THEMES.map((t) => (
+                    <SelectItem hideIndicator key={t.id} value={t.id}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectGroupLabel>Dark</SelectGroupLabel>
+                  {DARK_THEMES.map((t) => (
+                    <SelectItem hideIndicator key={t.id} value={t.id}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectPopup>
             </Select>
           }

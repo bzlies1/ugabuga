@@ -613,7 +613,7 @@ export default function ChatView(props: ChatViewProps) {
     strict: false,
     select: (params) => parseDiffRouteSearch(params),
   });
-  const { resolvedTheme } = useTheme();
+  const { resolvedAppearance } = useTheme();
   // Granular store selectors — avoid subscribing to prompt changes.
   const composerRuntimeMode = useComposerDraftStore(
     (store) => store.getComposerDraft(composerDraftTarget)?.runtimeMode ?? null,
@@ -3257,7 +3257,7 @@ export default function ChatView(props: ChatViewProps) {
               isRevertingCheckpoint={isRevertingCheckpoint}
               onImageExpand={onExpandTimelineImage}
               markdownCwd={gitCwd ?? undefined}
-              resolvedTheme={resolvedTheme}
+              resolvedTheme={resolvedAppearance}
               timestampFormat={timestampFormat}
               workspaceRoot={activeWorkspaceRoot}
               onIsAtEndChange={onIsAtEndChange}
@@ -3318,7 +3318,7 @@ export default function ChatView(props: ChatViewProps) {
               activeProjectDefaultModelSelection={activeProject?.defaultModelSelection}
               activeThreadModelSelection={activeThread?.modelSelection}
               activeThreadActivities={activeThread?.activities}
-              resolvedTheme={resolvedTheme}
+              resolvedTheme={resolvedAppearance}
               settings={settings}
               gitCwd={gitCwd}
               promptRef={promptRef}
