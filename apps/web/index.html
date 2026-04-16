@@ -10,25 +10,45 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script>
       (() => {
-        const LIGHT_BACKGROUND = "#ffffff";
-        const DARK_BACKGROUND = "#161616";
-        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        const DARK_BG = "#161616";
+        // Map themeId -> [appearance, chromeColor]
+        // Keep in sync with apps/web/src/themes/index.ts
+        const T = {
+          "default-light": ["light", "#ffffff"],
+          "catppuccin-latte": ["light", "#eff1f5"],
+          "rose-pine-dawn": ["light", "#faf4ed"],
+          "default-dark": ["dark", DARK_BG],
+          nord: ["dark", "#2e3440"],
+          monokai: ["dark", "#272822"],
+          "tokyo-night": ["dark", "#1a1b26"],
+        };
+        const m = document.querySelector('meta[name="theme-color"]');
         try {
-          const storedTheme = window.localStorage.getItem("t3code:theme");
-          const theme =
-            storedTheme === "light" || storedTheme === "dark" || storedTheme === "system"
-              ? storedTheme
-              : "system";
+          let s = window.localStorage.getItem("t3code:theme");
+          // Migrate legacy values
+          if (s === "light") {
+            s = "default-light";
+            window.localStorage.setItem("t3code:theme", s);
+          } else if (s === "dark") {
+            s = "default-dark";
+            window.localStorage.setItem("t3code:theme", s);
+          }
           const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          const isDark = theme === "dark" || (theme === "system" && prefersDark);
-          document.documentElement.classList.toggle("dark", isDark);
-          const chromeColor = isDark ? DARK_BACKGROUND : LIGHT_BACKGROUND;
-          document.documentElement.style.backgroundColor = chromeColor;
-          themeColorMeta?.setAttribute("content", chromeColor);
+          let resolved;
+          if (s === "system" || !s || !T[s]) {
+            resolved = prefersDark ? "default-dark" : "default-light";
+          } else {
+            resolved = s;
+            document.documentElement.dataset.theme = resolved;
+          }
+          const entry = T[resolved] || (prefersDark ? ["dark", DARK_BG] : ["light", "#ffffff"]);
+          document.documentElement.classList.toggle("dark", entry[0] === "dark");
+          document.documentElement.style.backgroundColor = entry[1];
+          m?.setAttribute("content", entry[1]);
         } catch {
           document.documentElement.classList.add("dark");
-          document.documentElement.style.backgroundColor = DARK_BACKGROUND;
-          themeColorMeta?.setAttribute("content", DARK_BACKGROUND);
+          document.documentElement.style.backgroundColor = DARK_BG;
+          m?.setAttribute("content", DARK_BG);
         }
       })();
     </script>

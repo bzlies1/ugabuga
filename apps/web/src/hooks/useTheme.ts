@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
-type Theme = "light" | "dark" | "system";
+import {
+  type ResolvedAppearance,
+  type ThemeId,
+  getThemeById,
+  isValidThemeId,
+  resolveTheme,
+} from "../themes";
+
 type ThemeSnapshot = {
-  theme: Theme;
+  theme: ThemeId;
   systemDark: boolean;
 };
 
@@ -15,9 +22,15 @@ const DEFAULT_THEME_SNAPSHOT: ThemeSnapshot = {
 const THEME_COLOR_META_NAME = "theme-color";
 const DYNAMIC_THEME_COLOR_SELECTOR = `meta[name="${THEME_COLOR_META_NAME}"][data-dynamic-theme-color="true"]`;
 
+/** Legacy value migration map. */
+const LEGACY_THEME_MAP: Record<string, ThemeId> = {
+  light: "default-light",
+  dark: "default-dark",
+};
+
 let listeners: Array<() => void> = [];
 let lastSnapshot: ThemeSnapshot | null = null;
-let lastDesktopTheme: Theme | null = null;
+let lastDesktopTheme: "light" | "dark" | "system" | null = null;
 
 function emitChange() {
   for (const listener of listeners) listener();
@@ -31,10 +44,19 @@ function getSystemDark() {
   return typeof window !== "undefined" && window.matchMedia(MEDIA_QUERY).matches;
 }
 
-function getStored(): Theme {
+function getStored(): ThemeId {
   if (!hasThemeStorage()) return DEFAULT_THEME_SNAPSHOT.theme;
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === "light" || raw === "dark" || raw === "system") return raw;
+  if (raw === null || raw === "system") return "system";
+
+  // Migrate legacy "light" / "dark" values
+  const migrated = LEGACY_THEME_MAP[raw];
+  if (migrated) {
+    localStorage.setItem(STORAGE_KEY, migrated);
+    return migrated;
+  }
+
+  if (isValidThemeId(raw)) return raw;
   return DEFAULT_THEME_SNAPSHOT.theme;
 }
 
@@ -87,15 +109,26 @@ export function syncBrowserChromeTheme() {
   ensureThemeColorMetaTag().setAttribute("content", backgroundColor);
 }
 
-function applyTheme(theme: Theme, suppressTransitions = false) {
+function applyTheme(themeId: ThemeId, suppressTransitions = false) {
   if (typeof document === "undefined" || typeof window === "undefined") return;
   if (suppressTransitions) {
     document.documentElement.classList.add("no-transitions");
   }
-  const isDark = theme === "dark" || (theme === "system" && getSystemDark());
+
+  const resolved = resolveTheme(themeId, getSystemDark());
+  const isDark = resolved.appearance === "dark";
+
+  // Set data-theme for named themes; clear for defaults resolved via system
+  if (themeId === "system") {
+    delete document.documentElement.dataset.theme;
+  } else {
+    document.documentElement.dataset.theme = resolved.id;
+  }
+
   document.documentElement.classList.toggle("dark", isDark);
   syncBrowserChromeTheme();
-  syncDesktopTheme(theme);
+  syncDesktopTheme(themeId);
+
   if (suppressTransitions) {
     // Force a reflow so the no-transitions class takes effect before removal
     // oxlint-disable-next-line no-unused-expressions
@@ -106,16 +139,23 @@ function applyTheme(theme: Theme, suppressTransitions = false) {
   }
 }
 
-function syncDesktopTheme(theme: Theme) {
+function syncDesktopTheme(themeId: ThemeId) {
   if (typeof window === "undefined") return;
   const bridge = window.desktopBridge;
-  if (!bridge || lastDesktopTheme === theme) {
+
+  // Desktop bridge only understands "light" | "dark" | "system".
+  // For "system" pass it through so Electron follows OS preference.
+  // For named themes, send the resolved appearance.
+  const desktopTheme: "light" | "dark" | "system" =
+    themeId === "system" ? "system" : resolveTheme(themeId, getSystemDark()).appearance;
+
+  if (!bridge || lastDesktopTheme === desktopTheme) {
     return;
   }
 
-  lastDesktopTheme = theme;
-  void bridge.setTheme(theme).catch(() => {
-    if (lastDesktopTheme === theme) {
+  lastDesktopTheme = desktopTheme;
+  void bridge.setTheme(desktopTheme).catch(() => {
+    if (lastDesktopTheme === desktopTheme) {
       lastDesktopTheme = null;
     }
   });
@@ -175,10 +215,11 @@ export function useTheme() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const theme = snapshot.theme;
 
-  const resolvedTheme: "light" | "dark" =
-    theme === "system" ? (snapshot.systemDark ? "dark" : "light") : theme;
+  const resolved = resolveTheme(theme, snapshot.systemDark);
+  const resolvedTheme: ThemeId = resolved.id;
+  const resolvedAppearance: ResolvedAppearance = resolved.appearance;
 
-  const setTheme = useCallback((next: Theme) => {
+  const setTheme = useCallback((next: ThemeId) => {
     if (!hasThemeStorage()) return;
     localStorage.setItem(STORAGE_KEY, next);
     applyTheme(next, true);
@@ -190,5 +231,7 @@ export function useTheme() {
     applyTheme(theme);
   }, [theme]);
 
-  return { theme, setTheme, resolvedTheme } as const;
+  return { theme, setTheme, resolvedTheme, resolvedAppearance } as const;
 }
+
+export { getThemeById };
