@@ -1,0 +1,190 @@
+/*
+ * Named theme CSS variable overrides.
+ *
+ * Each [data-theme] block overrides the semantic variables defined in index.css.
+ * Default light/dark themes have no block here — they use the :root / @variant dark
+ * values from index.css directly.
+ *
+ * IMPORTANT: Keep chromeColor values in sync with the THEMES registry in ./index.ts
+ * and the THEME_MAP in index.html (flash-prevention script).
+ */
+
+/* ——————————————————————————————————————————————
+   Nord (Dark)
+   Palette: https://www.nordtheme.com/docs/colors-and-palettes
+   —————————————————————————————————————————————— */
+:root[data-theme="nord"] {
+  color-scheme: dark;
+  --background: #2e3440;
+  --app-chrome-background: #2e3440;
+  --foreground: #eceff4;
+  --card: #3b4252;
+  --card-foreground: #eceff4;
+  --popover: #3b4252;
+  --popover-foreground: #eceff4;
+  --primary: #88c0d0;
+  --primary-foreground: #2e3440;
+  --secondary: #434c5e;
+  --secondary-foreground: #eceff4;
+  --muted: #434c5e;
+  --muted-foreground: #d8dee9;
+  --accent: #434c5e;
+  --accent-foreground: #eceff4;
+  --destructive: #bf616a;
+  --destructive-foreground: #d08770;
+  --border: #4c566a;
+  --input: #4c566a;
+  --ring: #88c0d0;
+  --info: #81a1c1;
+  --info-foreground: #88c0d0;
+  --success: #a3be8c;
+  --success-foreground: #a3be8c;
+  --warning: #ebcb8b;
+  --warning-foreground: #ebcb8b;
+  --scrollbar-thumb: rgba(216, 222, 233, 0.12);
+  --scrollbar-thumb-hover: rgba(216, 222, 233, 0.2);
+}
+
+/* ——————————————————————————————————————————————
+   Monokai (Dark)
+   Palette: https://monokai.pro/
+   —————————————————————————————————————————————— */
+:root[data-theme="monokai"] {
+  color-scheme: dark;
+  --background: #272822;
+  --app-chrome-background: #272822;
+  --foreground: #f8f8f2;
+  --card: #2d2e27;
+  --card-foreground: #f8f8f2;
+  --popover: #2d2e27;
+  --popover-foreground: #f8f8f2;
+  --primary: #a6e22e;
+  --primary-foreground: #272822;
+  --secondary: #3e3d32;
+  --secondary-foreground: #f8f8f2;
+  --muted: #3e3d32;
+  --muted-foreground: #a9a99e;
+  --accent: #3e3d32;
+  --accent-foreground: #f8f8f2;
+  --destructive: #f92672;
+  --destructive-foreground: #fd5ff0;
+  --border: #49483e;
+  --input: #49483e;
+  --ring: #a6e22e;
+  --info: #66d9ef;
+  --info-foreground: #66d9ef;
+  --success: #a6e22e;
+  --success-foreground: #a6e22e;
+  --warning: #e6db74;
+  --warning-foreground: #e6db74;
+  --scrollbar-thumb: rgba(248, 248, 242, 0.1);
+  --scrollbar-thumb-hover: rgba(248, 248, 242, 0.18);
+}
+
+/* ——————————————————————————————————————————————
+   Tokyo Night (Dark)
+   Palette: https://github.com/enkia/tokyo-night-vscode-theme
+   —————————————————————————————————————————————— */
+:root[data-theme="tokyo-night"] {
+  color-scheme: dark;
+  --background: #1a1b26;
+  --app-chrome-background: #1a1b26;
+  --foreground: #c0caf5;
+  --card: #1f2335;
+  --card-foreground: #c0caf5;
+  --popover: #1f2335;
+  --popover-foreground: #c0caf5;
+  --primary: #7aa2f7;
+  --primary-foreground: #1a1b26;
+  --secondary: #292e42;
+  --secondary-foreground: #c0caf5;
+  --muted: #292e42;
+  --muted-foreground: #565f89;
+  --accent: #292e42;
+  --accent-foreground: #c0caf5;
+  --destructive: #f7768e;
+  --destructive-foreground: #ff9e64;
+  --border: #3b4261;
+  --input: #3b4261;
+  --ring: #7aa2f7;
+  --info: #7dcfff;
+  --info-foreground: #7dcfff;
+  --success: #9ece6a;
+  --success-foreground: #9ece6a;
+  --warning: #e0af68;
+  --warning-foreground: #e0af68;
+  --scrollbar-thumb: rgba(192, 202, 245, 0.1);
+  --scrollbar-thumb-hover: rgba(192, 202, 245, 0.18);
+}
+
+/* ——————————————————————————————————————————————
+   Catppuccin Latte (Light)
+   Palette: https://github.com/catppuccin/catppuccin
+   —————————————————————————————————————————————— */
+:root[data-theme="catppuccin-latte"] {
+  color-scheme: light;
+  --background: #eff1f5;
+  --app-chrome-background: #eff1f5;
+  --foreground: #4c4f69;
+  --card: #e6e9ef;
+  --card-foreground: #4c4f69;
+  --popover: #e6e9ef;
+  --popover-foreground: #4c4f69;
+  --primary: #1e66f5;
+  --primary-foreground: #dce0e8;
+  --secondary: #ccd0da;
+  --secondary-foreground: #4c4f69;
+  --muted: #ccd0da;
+  --muted-foreground: #6c6f85;
+  --accent: #ccd0da;
+  --accent-foreground: #4c4f69;
+  --destructive: #d20f39;
+  --destructive-foreground: #e64553;
+  --border: #bcc0cc;
+  --input: #bcc0cc;
+  --ring: #1e66f5;
+  --info: #209fb5;
+  --info-foreground: #04a5e5;
+  --success: #40a02b;
+  --success-foreground: #40a02b;
+  --warning: #df8e1d;
+  --warning-foreground: #df8e1d;
+  --scrollbar-thumb: rgba(76, 79, 105, 0.15);
+  --scrollbar-thumb-hover: rgba(76, 79, 105, 0.25);
+}
+
+/* ——————————————————————————————————————————————
+   Rosé Pine Dawn (Light)
+   Palette: https://rosepinetheme.com/palette
+   —————————————————————————————————————————————— */
+:root[data-theme="rose-pine-dawn"] {
+  color-scheme: light;
+  --background: #faf4ed;
+  --app-chrome-background: #faf4ed;
+  --foreground: #575279;
+  --card: #fffaf3;
+  --card-foreground: #575279;
+  --popover: #fffaf3;
+  --popover-foreground: #575279;
+  --primary: #907aa9;
+  --primary-foreground: #faf4ed;
+  --secondary: #f2e9e1;
+  --secondary-foreground: #575279;
+  --muted: #f2e9e1;
+  --muted-foreground: #797593;
+  --accent: #f2e9e1;
+  --accent-foreground: #575279;
+  --destructive: #b4637a;
+  --destructive-foreground: #d7827e;
+  --border: #dfdad9;
+  --input: #dfdad9;
+  --ring: #907aa9;
+  --info: #286983;
+  --info-foreground: #56949f;
+  --success: #56949f;
+  --success-foreground: #56949f;
+  --warning: #ea9d34;
+  --warning-foreground: #ea9d34;
+  --scrollbar-thumb: rgba(87, 82, 121, 0.12);
+  --scrollbar-thumb-hover: rgba(87, 82, 121, 0.22);
+}
