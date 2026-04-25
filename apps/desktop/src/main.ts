@@ -36,14 +36,14 @@ import { autoUpdater } from "electron-updater";
 import type { ContextMenuItem } from "@t3tools/contracts";
 import { RotatingFileSink } from "@t3tools/shared/logging";
 import { parsePersistedServerObservabilitySettings } from "@t3tools/shared/serverSettings";
-import { DEFAULT_DESKTOP_BACKEND_PORT, resolveDesktopBackendPort } from "./backendPort";
+import { DEFAULT_DESKTOP_BACKEND_PORT, resolveDesktopBackendPort } from "./backendPort.ts";
 import {
   DEFAULT_DESKTOP_SETTINGS,
   readDesktopSettings,
   setDesktopServerExposurePreference,
   setDesktopUpdateChannelPreference,
   writeDesktopSettings,
-} from "./desktopSettings";
+} from "./desktopSettings.ts";
 import {
   readClientSettings,
   readSavedEnvironmentRegistry,
@@ -52,14 +52,15 @@ import {
   writeClientSettings,
   writeSavedEnvironmentRegistry,
   writeSavedEnvironmentSecret,
-} from "./clientPersistence";
-import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
-import { showDesktopConfirmDialog } from "./confirmDialog";
-import { resolveDesktopServerExposure } from "./serverExposure";
-import { syncShellEnvironment } from "./syncShellEnvironment";
-import { getAutoUpdateDisabledReason, shouldBroadcastDownloadProgress } from "./updateState";
-import { doesVersionMatchDesktopUpdateChannel } from "./updateChannels";
-import { ServerListeningDetector } from "./serverListeningDetector";
+} from "./clientPersistence.ts";
+import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness.ts";
+import { showDesktopConfirmDialog } from "./confirmDialog.ts";
+import { resolveDesktopServerExposure } from "./serverExposure.ts";
+import { syncShellEnvironment } from "./syncShellEnvironment.ts";
+import { waitForBackendStartupReady } from "./backendStartupReadiness.ts";
+import { getAutoUpdateDisabledReason, shouldBroadcastDownloadProgress } from "./updateState.ts";
+import { doesVersionMatchDesktopUpdateChannel } from "./updateChannels.ts";
+import { ServerListeningDetector } from "./serverListeningDetector.ts";
 import {
   createInitialDesktopUpdateState,
   reduceDesktopUpdateStateOnCheckFailure,
@@ -71,9 +72,10 @@ import {
   reduceDesktopUpdateStateOnInstallFailure,
   reduceDesktopUpdateStateOnNoUpdate,
   reduceDesktopUpdateStateOnUpdateAvailable,
-} from "./updateMachine";
-import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
-import { resolveDesktopAppBranding } from "./appBranding";
+} from "./updateMachine.ts";
+import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch.ts";
+import { resolveDesktopAppBranding } from "./appBranding.ts";
+import { bindFirstRevealTrigger, type RevealSubscription } from "./windowReveal.ts";
 
 syncShellEnvironment();
 
@@ -459,51 +461,13 @@ function cancelBackendReadinessWait(): void {
 }
 
 async function waitForBackendWindowReady(baseUrl: string): Promise<"listening" | "http"> {
-  const httpReadyPromise = waitForBackendHttpReady(baseUrl, {
-    timeoutMs: 60_000,
-  });
-  const listeningPromise = backendListeningDetector?.promise;
-
-  if (!listeningPromise) {
-    await httpReadyPromise;
-    return "http";
-  }
-
-  return await new Promise<"listening" | "http">((resolve, reject) => {
-    let settled = false;
-
-    const settleResolve = (source: "listening" | "http") => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      if (source === "listening") {
-        cancelBackendReadinessWait();
-      }
-      resolve(source);
-    };
-
-    const settleReject = (error: unknown) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      reject(error);
-    };
-
-    listeningPromise.then(
-      () => settleResolve("listening"),
-      (error) => settleReject(error),
-    );
-    httpReadyPromise.then(
-      () => settleResolve("http"),
-      (error) => {
-        if (settled && isBackendReadinessAborted(error)) {
-          return;
-        }
-        settleReject(error);
-      },
-    );
+  return await waitForBackendStartupReady({
+    listeningPromise: backendListeningDetector?.promise ?? null,
+    waitForHttpReady: () =>
+      waitForBackendHttpReady(baseUrl, {
+        timeoutMs: 60_000,
+      }),
+    cancelHttpWait: cancelBackendReadinessWait,
   });
 }
 
@@ -1967,7 +1931,7 @@ function createWindow(): BrowserWindow {
     title: APP_DISPLAY_NAME,
     ...getWindowTitleBarOptions(),
     webPreferences: {
-      preload: Path.join(__dirname, "preload.js"),
+      preload: Path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -2035,16 +1999,17 @@ function createWindow(): BrowserWindow {
     emitUpdateState();
   });
 
-  let initialRevealScheduled = false;
-  const revealInitialWindow = () => {
-    if (initialRevealScheduled) {
-      return;
-    }
-    initialRevealScheduled = true;
-    revealWindow(window);
-  };
-
-  window.once("ready-to-show", revealInitialWindow);
+  // On Linux/Wayland with `show: false`, Electron's `ready-to-show` only
+  // fires after `show()` is called, deadlocking the standard "wait for
+  // ready, then show" pattern. Add `did-finish-load` as a Linux-only
+  // fallback so the window still surfaces once the renderer has loaded
+  // the page. Other platforms keep the no-flash `ready-to-show` path,
+  // since `did-finish-load` typically fires before the first paint there.
+  const revealSubscribers: RevealSubscription[] = [(fire) => window.once("ready-to-show", fire)];
+  if (process.platform === "linux") {
+    revealSubscribers.push((fire) => window.webContents.once("did-finish-load", fire));
+  }
+  bindFirstRevealTrigger(revealSubscribers, () => revealWindow(window));
 
   if (isDevelopment) {
     void window.loadURL(resolveDesktopDevServerUrl());
@@ -2119,9 +2084,9 @@ async function bootstrap(): Promise<void> {
   if (isDevelopment) {
     mainWindow = createWindow();
     writeDesktopLogHeader("bootstrap main window created");
-    void waitForBackendHttpReady(backendHttpUrl)
-      .then(() => {
-        writeDesktopLogHeader("bootstrap backend ready");
+    void waitForBackendWindowReady(backendHttpUrl)
+      .then((source) => {
+        writeDesktopLogHeader(`bootstrap backend ready source=${source}`);
       })
       .catch((error) => {
         if (isBackendReadinessAborted(error)) {
